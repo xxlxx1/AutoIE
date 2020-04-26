@@ -19,7 +19,7 @@ from transformers import BertConfig
 from bert_model import BertCRF
 import utils
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4'
 
 
 def set_seed(opt, seed):
