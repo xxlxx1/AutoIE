@@ -182,7 +182,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
     cfig_path = os.path.join(config.bert_model_dir,
                              'bert_config.json')
     cfig = BertConfig.from_json_file(cfig_path)
-    cfig.device = config.device
+    cfig.device_name = config.device_name
     cfig.label2idx = config.label2idx
     cfig.label_size = config.label_size
     cfig.idx2labels = config.idx2labels
