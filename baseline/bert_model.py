@@ -14,7 +14,7 @@ class BertCRF(BertPreTrainedModel):
     def __init__(self, cfig):
         super(BertCRF, self).__init__(cfig)
 
-        self.device = cfig.device
+        self.device = torch.device(cfig.device_name)
         self.num_labels = len(cfig.label2idx)
         self.bert = BertModel(cfig)
         self.dropout = nn.Dropout(cfig.hidden_dropout_prob)

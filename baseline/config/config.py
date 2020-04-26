@@ -50,7 +50,8 @@ class Config:
         self.batch_size = args.batch_size
         self.clip = 5
         self.lr_decay = args.lr_decay
-        self.device = torch.device(args.device)
+        self.device_name = args.device
+        self.device = torch.device(self.device_name)
         self.num_outer_iterations = args.num_outer_iterations
 
         # transformer hyperparameters
