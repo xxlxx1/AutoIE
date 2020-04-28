@@ -83,14 +83,14 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         model_name = model_folder + "/final_bert_crf"
         config_name = model_folder + "/config.conf"
         all_train_batches = batching_list_instances(config=config, insts=all_train_insts)
-        model = train_one(config=config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
+        train_one(config=config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
                           model_name=model_name, config_name=config_name)
         # load the best final model
-        utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
-        model.eval()
-        logging.info("\n")
-        result = evaluate_model(config, model, dev_batches, "dev", dev_insts)
-        logging.info("\n\n")
+        # utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
+        # model.eval()
+        # logging.info("\n")
+        # result = evaluate_model(config, model, dev_batches, "dev", dev_insts)
+        # logging.info("\n\n")
 
 
 def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
@@ -177,8 +177,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
                     pickle.dump(config, f)
                     f.close()
         model.zero_grad()
-    torch.cuda.empty_cache()
-    return model
+    # return model
 
 
 def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, name: str, insts: List[Instance]):
