@@ -177,7 +177,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
                     pickle.dump(config, f)
                     f.close()
         model.zero_grad()
-
+    torch.cuda.empty_cache()
     return model
 
 
