@@ -27,5 +27,5 @@ def parse_arguments_t(parser):
 
     args = parser.parse_args()
     for k in args.__dict__:
-        print(k + ": " + str(args.__dict__[k]))
+        print(k + ": /t" + str(args.__dict__[k]))
     return args
