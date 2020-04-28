@@ -14,7 +14,7 @@ class BertCRF(BertPreTrainedModel):
     def __init__(self, cfig):
         super(BertCRF, self).__init__(cfig)
 
-        self.device = torch.device(cfig.device_name)
+        self.device_name = cfig.device
         self.num_labels = len(cfig.label2idx)
         self.bert = BertModel(cfig)
         self.dropout = nn.Dropout(cfig.hidden_dropout_prob)
@@ -37,8 +37,8 @@ class BertCRF(BertPreTrainedModel):
         if labels is not None:
             batch_size = input_ids.size(0)
             sent_len = input_ids.size(1)  # one batch max seq length
-            maskTemp = torch.arange(1, sent_len + 1, dtype=torch.long).view(1, sent_len).expand(batch_size, sent_len).to(self.device)
-            mask = torch.le(maskTemp, input_seq_lens.view(batch_size, 1).expand(batch_size, sent_len)).to(self.device)
+            maskTemp = torch.arange(1, sent_len + 1, dtype=torch.long).view(1, sent_len).expand(batch_size, sent_len).to(self.device_name)
+            mask = torch.le(maskTemp, input_seq_lens.view(batch_size, 1).expand(batch_size, sent_len)).to(self.device_name)
 
             unlabed_score, labeled_score = self.inferencer(logits, input_seq_lens, labels, attention_mask)
             return unlabed_score - labeled_score

@@ -19,8 +19,6 @@ from transformers import BertConfig
 from bert_model import BertCRF
 import utils
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '4'
-
 
 def set_seed(opt, seed):
     random.seed(seed)
@@ -60,7 +58,6 @@ def parse_arguments_t(parser):
 
     # model hyperparameter
     parser.add_argument('--model_folder', type=str, default="saved_model", help="The name to save the model files")
-    parser.add_argument('--device_num', type=str, default='0', help="The gpu number you want to use")
 
     args = parser.parse_args()
     for k in args.__dict__:
@@ -84,17 +81,15 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
     for iter in range(num_outer_iterations):
 
-        logging.info(f"[Training Info] Running for {iter}th large iterations.")
+        logging.info(f"-" * 20 + " [Training Info] Running for {iter}th large iterations. " + "-" * 20)
 
         model_names = []  # model names for each fold
-
         train_batches = [batching_list_instances(config, insts) for insts in train_insts]
-
         logging.info("length of train_insts：%d"% len(train_insts))
 
         # train 2 models in 2 folds
         for fold_id, folded_train_insts in enumerate(train_insts):
-            logging.info(f"[Training Info] Training fold {fold_id}.")
+            logging.info(f"\n" + "-------- [Training Info] Training fold {fold_id}. -------")
             # Initialize bert model
             logging.info("Initialized from pre-trained Model")
 
@@ -126,20 +121,18 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
             hard_constraint_predict(config=config, model=model,
                                     fold_batches=train_batches[1 - fold_id],
                                     folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
-        logging.info("\n\n")
 
-        logging.info("[Training Info] Training the final model")
+        # train the final model
+        logging.info("\n\n")
+        logging.info("-------- [Training Info] Training the final model-------- ")
 
         # merge the result data to training the final model
         all_train_insts = list(itertools.chain.from_iterable(train_insts))
 
         logging.info("Initialized from pre-trained Model")
-
         model_name = model_folder + "/final_bert_crf"
         config_name = model_folder + "/config.conf"
-
         all_train_batches = batching_list_instances(config=config, insts=all_train_insts)
-        # train the final model
         model = train_one(config=config, train_batches=all_train_batches, dev_insts=dev_insts, dev_batches=dev_batches,
                           model_name=model_name, config_name=config_name)
         # load the best final model
@@ -182,12 +175,14 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
     cfig_path = os.path.join(config.bert_model_dir,
                              'bert_config.json')
     cfig = BertConfig.from_json_file(cfig_path)
-    cfig.device_name = config.device_name
+    cfig.device = config.device
     cfig.label2idx = config.label2idx
     cfig.label_size = config.label_size
     cfig.idx2labels = config.idx2labels
     # load pretrained bert model
     model = BertCRF.from_pretrained(config.bert_model_dir, config=cfig)
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
     model.to(config.device)
 
     if config.full_finetuning:
@@ -226,21 +221,21 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             # update loss
             loss = model(input_ids, input_seq_lens=input_seq_lens, annotation_mask=annotation_mask,
                          labels=labels, attention_mask=input_masks)
-            epoch_loss += loss.item()
+            epoch_loss += loss.mean().item()
             model.zero_grad()
-            loss.backward()
+            loss.mean().backward()
             # gradient clipping
             nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
-        logging.info("Epoch %d: %.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time))
+        logging.info("Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time))
 
         model.eval()
         with torch.no_grad():
             # metric is [precision, recall, f_score]
             dev_metrics = evaluate_model(config, model, dev_batches, "dev", dev_insts)
             if dev_metrics[2] > best_dev_f1:  # save the best model
-                logging.info("saving the best model...")
+                # logging.info(" " * 90 + "saving the best model...")
                 best_dev_f1 = dev_metrics[2]
 
                 model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
@@ -285,7 +280,7 @@ def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, name: str, i
     precision = p * 1.0 / total_predict * 100 if total_predict != 0 else 0
     recall = p * 1.0 / total_entity * 100 if total_entity != 0 else 0
     fscore = 2.0 * precision * recall / (precision + recall) if precision != 0 or recall != 0 else 0
-    logging.info("[%s set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (name, precision, recall, fscore))
+    logging.info(" " * 42 + "[%s set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (name, precision, recall, fscore))
     return [precision, recall, fscore]
 
 
@@ -296,7 +291,6 @@ def main():
     conf = Config(opt)
     conf.train_file = conf.dataset + "/train.txt"
     conf.dev_file = conf.dataset + "/valid.txt"
-    os.environ['CUDA_VISIBLE_DEVICES'] = opt.device_num
     # data reader
     reader = Reader(conf.digit2zero)
     set_seed(opt, conf.seed)
@@ -307,6 +301,7 @@ def main():
     # params
     for k in opt.__dict__:
         logging.info(k + ": " + str(opt.__dict__[k]))
+    logging.info("batch size:" + str(conf.batch_size))
 
     # read trains/devs
     logging.info("\n")

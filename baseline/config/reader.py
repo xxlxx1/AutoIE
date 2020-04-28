@@ -4,8 +4,8 @@ from typing import List
 import re
 from transformers import BertTokenizer
 
-bert_model_dir = "bert-base-chinese-pytorch"  # change this if needed
-tokenizer = BertTokenizer.from_pretrained(bert_model_dir, do_lower_case=True)
+# bert_model_dir = "bert-base-chinese-pytorch"  # change this if needed
+# tokenizer = BertTokenizer.from_pretrained(bert_model_dir, do_lower_case=True)
 
 
 class Reader:
@@ -60,7 +60,8 @@ class Reader:
 
 if __name__ == "__main__":
     reader = Reader(False)
-    tmp_file = "data/" + 'ecommerce' + "/train.txt"
+    # tmp_file = "data/" + 'ecommerce' + "/train.txt"
+    tmp_file = "../../data/train.txt"
     trains = reader.read_txt(tmp_file, -1)
 
 

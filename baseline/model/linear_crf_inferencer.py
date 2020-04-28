@@ -36,7 +36,7 @@ class LinearCRF(nn.Module):
         :param mask:
         :return:
         """
-        all_scores=  self.calculate_all_scores(lstm_scores= lstm_scores)
+        all_scores = self.calculate_all_scores(lstm_scores= lstm_scores)
         unlabed_score = self.forward_unlabeled(all_scores, word_seq_lens)
         labeled_score = self.forward_labeled(all_scores, word_seq_lens, tags, mask)
         return unlabed_score, labeled_score
@@ -124,7 +124,7 @@ class LinearCRF(nn.Module):
         """
         batchSize = all_scores.shape[0]
         sentLength = all_scores.shape[1]
-        if annotation_mask is not None:
+        if annotation_mask is not None:   # 比起标准的维特比解码就是多了这个东西
             annotation_mask = annotation_mask.float().log()
         # sent_len =
         scoresRecord = torch.zeros([batchSize, sentLength, self.label_size]).to(self.device)

@@ -47,11 +47,10 @@ class Config:
         self.l2 = args.l2
         self.num_epochs = args.num_epochs
         self.use_dev = True
-        self.batch_size = args.batch_size
+        self.batch_size = args.batch_size * max(1, torch.cuda.device_count())
         self.clip = 5
         self.lr_decay = args.lr_decay
-        self.device_name = args.device
-        self.device = torch.device(self.device_name)
+        self.device = torch.device(args.device)
         self.num_outer_iterations = args.num_outer_iterations
 
         # transformer hyperparameters
