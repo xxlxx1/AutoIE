@@ -2,6 +2,7 @@ import os
 import logging
 import argparse
 import pickle
+import copy
 
 from transformers import BertConfig
 from bert_model import BertCRF
@@ -55,7 +56,7 @@ def main():
     config_name = "/data/xlxia/code/AutoIE/baseline/saved_model/config.conf"
     with open(config_name, 'rb') as f:
         config = pickle.load(f)
-    label2idx = config.label2idx
+    label2idx = copy.deepcopy(config.label2idx)
 
     _, devs = prepare_data(logging, config)
     config.label2idx = label2idx
