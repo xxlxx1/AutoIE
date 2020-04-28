@@ -20,12 +20,11 @@ def set_seed(opt, seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def prepare_data(logging, conf, opt):
+def prepare_data(logging, conf):
     conf.train_file = conf.dataset + "/train.txt"
     conf.dev_file = conf.dataset + "/valid.txt"
     # data reader
     reader = Reader(conf.digit2zero)
-    set_seed(opt, conf.seed)
 
     # read trains/devs
     logging.info("\n")

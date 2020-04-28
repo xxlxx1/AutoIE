@@ -17,7 +17,7 @@ from transformers import BertConfig
 from bert_model import BertCRF
 import utils
 from argument import parse_arguments_t
-from get_data import prepare_data, hard_constraint_predict
+from get_data import prepare_data, hard_constraint_predict, set_seed
 from config import Config, evaluate_batch_insts, batching_list_instances
 
 
@@ -90,7 +90,7 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         # model.eval()
         # logging.info("\n")
         # result = evaluate_model(config, model, dev_batches, "dev", dev_insts)
-        # logging.info("\n\n")
+        logging.info("\n\n")
 
 
 def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
@@ -213,7 +213,7 @@ def main():
     parser = argparse.ArgumentParser(description="Transformer CRF implementation")
     opt = parse_arguments_t(parser)
     conf = Config(opt)
-
+    set_seed(opt, conf.seed)
     # set logger
     utils.set_logger(os.path.join("log", opt.log_name))
 
