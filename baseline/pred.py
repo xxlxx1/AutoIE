@@ -55,10 +55,10 @@ def main():
     config_name = "/data/xlxia/code/AutoIE/baseline/saved_model/config.conf"
     with open(config_name, 'rb') as f:
         config = pickle.load(f)
-    labe2idx = config.labe2idx
+    label2idx = config.label2idx
 
     _, devs = prepare_data(logging, config)
-    config.labe2idx = labe2idx
+    config.label2idx = label2idx
     model = load_model(config)
     pred(model, devs, config)
 
