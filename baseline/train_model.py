@@ -1,68 +1,24 @@
 import argparse
-import random
 import numpy as np
-from typing import Tuple
-from config import Reader, Config, evaluate_batch_insts, batching_list_instances
+from typing import Tuple, List
 import time
 import torch
-from typing import List
 from common import Instance
 import os
 import logging
 import pickle
-import math
+
 import itertools
 from torch.optim import Adam
 import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
+
 from transformers import BertConfig
 from bert_model import BertCRF
 import utils
-
-
-def set_seed(opt, seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if opt.device.startswith("cuda"):
-        print("using GPU...", torch.cuda.current_device())
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-
-
-def parse_arguments_t(parser):
-    # Training Hyperparameters
-    parser.add_argument('--device', type=str, default="cuda", choices=['cpu', 'cuda'],
-                        help="GPU/CPU devices")
-    parser.add_argument('--seed', type=int, default=2019, help="random seed")
-    parser.add_argument('--digit2zero', action="store_true", default=False,
-                        help="convert the number to 0, make it true is better")
-    parser.add_argument('--dataset', type=str, default="data")
-    parser.add_argument('--optimizer', type=str, default="sgd")
-    parser.add_argument('--learning_rate', type=float, default=1e-4)
-    parser.add_argument('--momentum', type=float, default=0.0)
-    parser.add_argument('--l2', type=float, default=1e-8)
-    parser.add_argument('--lr_decay', type=float, default=0)
-    parser.add_argument('--batch_size', type=int, default=32, help="default batch size is 32 (works well)")
-    parser.add_argument('--num_epochs', type=int, default=30, help="Usually we set to 10.")  # origin 100
-    parser.add_argument('--train_num', type=int, default=-1, help="-1 means all the data")
-    parser.add_argument('--dev_num', type=int, default=-1, help="-1 means all the data")
-    parser.add_argument('--num_outer_iterations', type=int, default=10, help="Number of outer iterations for cross validation")
-
-    # bert hyperparameter
-    parser.add_argument('--bert_model_dir', default='bert-base-chinese-pytorch', help="Directory containing the BERT model in PyTorch")
-    parser.add_argument('--max_len', default=180, help="max allowed sequence length")
-    parser.add_argument('--full_finetuning', default=True, action='store_true',
-                        help="Whether to fine tune the pre-trained model")
-    parser.add_argument('--clip_grad', default=5, help="gradient clipping")
-
-    # model hyperparameter
-    parser.add_argument('--model_folder', type=str, default="saved_model", help="The name to save the model files")
-
-    args = parser.parse_args()
-    for k in args.__dict__:
-        print(k + ": " + str(args.__dict__[k]))
-    return args
+from argument import parse_arguments_t
+from get_data import prepare_data, hard_constraint_predict
+from config import Config, evaluate_batch_insts, batching_list_instances
 
 
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
@@ -72,7 +28,6 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
     dev_batches = batching_list_instances(config, dev_insts)
 
     model_folder = config.model_folder
-
     logging.info("[Training Info] The model will be saved to: %s" % (model_folder))
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
@@ -81,26 +36,21 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
     for iter in range(num_outer_iterations):
 
-        logging.info(f"-" * 20 + " [Training Info] Running for {iter}th large iterations. " + "-" * 20)
+        logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
 
         model_names = []  # model names for each fold
         train_batches = [batching_list_instances(config, insts) for insts in train_insts]
-        logging.info("length of train_insts：%d"% len(train_insts))
 
         # train 2 models in 2 folds
         for fold_id, folded_train_insts in enumerate(train_insts):
-            logging.info(f"\n" + "-------- [Training Info] Training fold {fold_id}. -------")
-            # Initialize bert model
-            logging.info("Initialized from pre-trained Model")
-
+            logging.info("\n" + f"-------- [Training Info] Training fold {fold_id}. Initialized from pre-trained Model -------")
             model_name = model_folder + f"/bert_crf_{fold_id}"
             model_names.append(model_name)
-            train_one(config=config, train_batches=train_batches[fold_id],
+            train_one(config=config, train_batches=train_batches[fold_id],  # Initialize bert model
                       dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
 
         # assign prediction to other folds
-        logging.info("\n\n")
-        logging.info("[Data Info] Assigning labels")
+        logging.info("\n\n[Data Info] Assigning labels")
 
         # using the model trained in one fold to predict the result of another fold's data
         # and update the label of another fold with the predict result
@@ -141,31 +91,6 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         logging.info("\n")
         result = evaluate_model(config, model, dev_batches, "dev", dev_insts)
         logging.info("\n\n")
-
-
-def hard_constraint_predict(config: Config, model: BertCRF, fold_batches: List[Tuple], folded_insts:List[Instance], model_type:str = "hard"):
-    """using the model trained in one fold to predict the result of another fold"""
-    batch_id = 0
-    batch_size = config.batch_size
-    model.eval()
-    for batch in fold_batches:
-        one_batch_insts = folded_insts[batch_id * batch_size:(batch_id + 1) * batch_size]
-
-        input_ids, input_seq_lens, annotation_mask, labels = batch
-        input_masks = input_ids.gt(0)
-        # get the predict result
-        batch_max_scores, batch_max_ids = model(input_ids, input_seq_lens=input_seq_lens,
-                                                annotation_mask=annotation_mask, labels=None, attention_mask=input_masks)
-
-        batch_max_ids = batch_max_ids.cpu().numpy()
-        word_seq_lens = batch[1].cpu().numpy()
-        for idx in range(len(batch_max_ids)):
-            length = word_seq_lens[idx]
-            prediction = batch_max_ids[idx][:length].tolist()
-            prediction = prediction[::-1]
-            # update the labels of another fold
-            one_batch_insts[idx].output_ids = prediction
-        batch_id += 1
 
 
 def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
@@ -289,11 +214,6 @@ def main():
     parser = argparse.ArgumentParser(description="Transformer CRF implementation")
     opt = parse_arguments_t(parser)
     conf = Config(opt)
-    conf.train_file = conf.dataset + "/train.txt"
-    conf.dev_file = conf.dataset + "/valid.txt"
-    # data reader
-    reader = Reader(conf.digit2zero)
-    set_seed(opt, conf.seed)
 
     # set logger
     utils.set_logger(os.path.join(conf.model_folder, 'train.log'))
@@ -303,27 +223,7 @@ def main():
         logging.info(k + ": " + str(opt.__dict__[k]))
     logging.info("batch size:" + str(conf.batch_size))
 
-    # read trains/devs
-    logging.info("\n")
-    logging.info("Loading the datasets...")
-    trains = reader.read_txt(conf.train_file, conf.train_num)
-    devs = reader.read_txt(conf.dev_file, conf.dev_num)
-
-    logging.info("Building label idx ...")
-    # build label2idx and idx2label
-    conf.build_label_idx(trains + devs)
-
-    random.shuffle(trains)
-    # set the prediction flag, if is_prediction is False, we will not update this label.
-    for inst in trains:
-        inst.is_prediction = [False] * len(inst.input)
-        for pos, label in enumerate(inst.output):
-            if label == conf.O:
-                inst.is_prediction[pos] = True
-    # dividing the data into 2 parts(num_folds default to 2)
-    num_insts_in_fold = math.ceil(len(trains) / conf.num_folds)
-    trains = [trains[i * num_insts_in_fold: (i + 1) * num_insts_in_fold] for i in range(conf.num_folds)]
-
+    trains, devs = prepare_data(logging, conf, opt)
     train_model(config=conf, train_insts=trains, dev_insts=devs)
 
 
