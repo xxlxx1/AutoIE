@@ -1,1 +1,1 @@
-python train_model.py --dataset ../data --num_epochs 30 --model_folder saved_model
+python train_model.py --dataset ../data --num_epochs 30 --model_folder saved_model  --batch_size 32

@@ -216,7 +216,7 @@ def main():
     conf = Config(opt)
 
     # set logger
-    utils.set_logger(os.path.join(conf.model_folder, 'train.log'))
+    utils.set_logger(os.path.join("log", opt.log_name))
 
     # params
     for k in opt.__dict__:

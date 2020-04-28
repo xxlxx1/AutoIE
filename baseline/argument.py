@@ -24,6 +24,7 @@ def parse_arguments_t(parser):
 
     # model hyperparameter
     parser.add_argument('--model_folder', type=str, default="saved_model", help="The name to save the model files")
+    parser.add_argument('--log_name', type=str, default="train.log", help="The name to save the model files")
 
     args = parser.parse_args()
     for k in args.__dict__:
