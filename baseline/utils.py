@@ -123,6 +123,8 @@ def load_checkpoint(checkpoint, model, optimizer=None):
     if not os.path.exists(checkpoint):
         raise ("File doesn't exist {}".format(checkpoint))
     checkpoint = torch.load(checkpoint)
+    if torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
     model.load_state_dict(checkpoint['state_dict'])
 
     if optimizer:
