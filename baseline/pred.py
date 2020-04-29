@@ -1,31 +1,14 @@
-import os
 import logging
 import pickle
 import copy
 
-from transformers import BertConfig
-from bert_model import BertCRF
-import utils
 from get_data import prepare_data
 from config import batching_list_instances
-
-
-def load_model(config):
-    cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
-    cfig = BertConfig.from_json_file(cfig_path)
-    cfig.device = config.device
-    cfig.label2idx = config.label2idx
-    cfig.label_size = config.label_size
-    cfig.idx2labels = config.idx2labels
-
-    model = BertCRF(cfig=cfig)
-    model.to(cfig.device)
-    utils.load_checkpoint(os.path.join(config.model_folder, 'final_bert_crf/best.pth.tar'), model)
-    model.eval()
-    return model
+from train_model import load_model
 
 
 def pred(model, dev_insts, config):
+    model.eval()
     batch_size = 32
     dev_batches = batching_list_instances(config, dev_insts)
     batch_id = 0
@@ -55,7 +38,7 @@ def main():
 
     _, devs = prepare_data(logging, config)
     config.label2idx = label2idx
-    model = load_model(config)
+    model = load_model(config, 'final_bert_crf/best.pth.tar')
     pred(model, devs, config)
 
 

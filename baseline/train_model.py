@@ -24,8 +24,7 @@ from config import Config, evaluate_batch_insts, batching_list_instances
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
     train_num = sum([len(insts) for insts in train_insts])
     logging.info(("[Training Info] number of instances: %d" % (train_num)))
-    # get the batched data
-    dev_batches = batching_list_instances(config, dev_insts)
+    dev_batches = batching_list_instances(config, dev_insts)   # 验证集一直不会改变
 
     model_folder = config.model_folder
     logging.info("[Training Info] The model will be saved to: %s" % (model_folder))
@@ -33,19 +32,15 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         os.makedirs(model_folder)
 
     num_outer_iterations = config.num_outer_iterations
-
     for iter in range(num_outer_iterations):
 
         logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
-
-        model_names = []  # model names for each fold
         train_batches = [batching_list_instances(config, insts) for insts in train_insts]
 
         # train 2 models in 2 folds
         for fold_id, folded_train_insts in enumerate(train_insts):
             logging.info("\n" + f"-------- [Training Info] Training fold {fold_id}. Initialized from pre-trained Model -------")
             model_name = model_folder + f"/bert_crf_{fold_id}"
-            model_names.append(model_name)
             train_one(config=config, train_batches=train_batches[fold_id],  # Initialize bert model
                       dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
 
@@ -68,7 +63,6 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
             model.to(cfig.device)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
-
             hard_constraint_predict(config=config, model=model,
                                     fold_batches=train_batches[1 - fold_id],
                                     folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
@@ -94,22 +88,28 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         logging.info("\n\n")
 
 
-def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
-              model_name: str, config_name: str = None) -> BertCRF:
-
-    # load config for bertCRF
+def load_model(config, loadpath=None):
     cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
     cfig = BertConfig.from_json_file(cfig_path)
     cfig.device = config.device
     cfig.label2idx = config.label2idx
     cfig.label_size = config.label_size
     cfig.idx2labels = config.idx2labels
-    # load pretrained bert model
-    model = BertCRF.from_pretrained(config.bert_model_dir, config=cfig)
+
+    model = BertCRF(cfig=cfig)
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
-    model.to(config.device)
+    model.to(cfig.device)
+    if loadpath:
+        utils.load_checkpoint(os.path.join(config.model_folder, loadpath), model)
+    return model
 
+
+def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
+              model_name: str, config_name: str = None):
+
+    # load config for bertCRF
+    model = load_model(config)
     if config.full_finetuning:
         logging.info('full finetuning')
         param_optimizer = list(model.named_parameters())
@@ -128,8 +128,6 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
 
     optimizer = Adam(optimizer_grouped_parameters, lr=config.learning_rate)
     scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 1 / (1 + 0.05 * epoch))
-
-    model.train()
 
     epoch = config.num_epochs
     best_dev_f1 = -1
@@ -158,7 +156,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
         model.eval()
         with torch.no_grad():
             # metric is [precision, recall, f_score]
-            dev_metrics = evaluate_model(config, model, dev_batches, "dev", dev_insts)
+            dev_metrics = evaluate_model(config, model, dev_batches, dev_insts)
             eval_info = " [dev set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2])
             logging.info(model_name.split("/")[-1] + train_info + "\t" + eval_info)
             if dev_metrics[2] > best_dev_f1:  # save the best model
@@ -181,11 +179,11 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
     # return model
 
 
-def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, name: str, insts: List[Instance]):
+def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, insts: List[Instance]):
     # evaluation
     metrics = np.asarray([0, 0, 0], dtype=int)
     batch_id = 0
-    batch_size = config.batch_size * 2
+    batch_size = config.batch_size
     for batch in batch_insts_ids:
         one_batch_insts = insts[batch_id * batch_size:(batch_id + 1) * batch_size]
 
