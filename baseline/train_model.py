@@ -98,8 +98,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
               model_name: str, config_name: str = None) -> BertCRF:
 
     # load config for bertCRF
-    cfig_path = os.path.join(config.bert_model_dir,
-                             'bert_config.json')
+    cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
     cfig = BertConfig.from_json_file(cfig_path)
     cfig.device = config.device
     cfig.label2idx = config.label2idx
@@ -154,16 +153,17 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
-        logging.info("Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time))
+        train_info = " Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time)
 
         model.eval()
         with torch.no_grad():
             # metric is [precision, recall, f_score]
             dev_metrics = evaluate_model(config, model, dev_batches, "dev", dev_insts)
+            eval_info = " [dev set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2])
+            logging.info(model_name.split("/")[-1] + train_info + "\t" + eval_info)
             if dev_metrics[2] > best_dev_f1:  # save the best model
                 # logging.info(" " * 90 + "saving the best model...")
                 best_dev_f1 = dev_metrics[2]
-
                 model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
                 optimizer_to_save = optimizer
                 utils.save_checkpoint({'epoch': epoch + 1,
@@ -185,7 +185,7 @@ def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, name: str, i
     # evaluation
     metrics = np.asarray([0, 0, 0], dtype=int)
     batch_id = 0
-    batch_size = config.batch_size
+    batch_size = config.batch_size * 2
     for batch in batch_insts_ids:
         one_batch_insts = insts[batch_id * batch_size:(batch_id + 1) * batch_size]
 
@@ -205,7 +205,6 @@ def evaluate_model(config: Config, model: BertCRF, batch_insts_ids, name: str, i
     precision = p * 1.0 / total_predict * 100 if total_predict != 0 else 0
     recall = p * 1.0 / total_entity * 100 if total_entity != 0 else 0
     fscore = 2.0 * precision * recall / (precision + recall) if precision != 0 or recall != 0 else 0
-    logging.info(" " * 42 + "[%s set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (name, precision, recall, fscore))
     return [precision, recall, fscore]
 
 
@@ -221,7 +220,6 @@ def main():
     # params
     for k in opt.__dict__:
         logging.info(k + ": " + str(opt.__dict__[k]))
-    logging.info("batch size:" + str(conf.batch_size))
 
     trains, devs = prepare_data(logging, conf)
     train_model(config=conf, train_insts=trains, dev_insts=devs)
