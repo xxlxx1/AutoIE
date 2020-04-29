@@ -41,18 +41,7 @@ def pred(model, dev_insts, config):
 
 
 def main():
-    logging.info("Transformer implementation")
-    parser = argparse.ArgumentParser(description="Transformer CRF implementation")
-    # opt = parse_arguments_t(parser)
-    # conf = Config(opt)
 
-    # set logger
-    # utils.set_logger(os.path.join("log", opt.log_name))
-
-    # params
-    # for k in opt.__dict__:
-    #     logging.info(k + ": " + str(opt.__dict__[k]))
-    # logging.info("batch size:" + str(conf.batch_size))
     config_name = "/data/xlxia/code/AutoIE/baseline/saved_model/config.conf"
     with open(config_name, 'rb') as f:
         config = pickle.load(f)

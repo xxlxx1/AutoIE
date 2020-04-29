@@ -222,7 +222,7 @@ def main():
         logging.info(k + ": " + str(opt.__dict__[k]))
     logging.info("batch size:" + str(conf.batch_size))
 
-    trains, devs = prepare_data(logging, conf, opt)
+    trains, devs = prepare_data(logging, conf)
     train_model(config=conf, train_insts=trains, dev_insts=devs)
 
 
