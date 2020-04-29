@@ -34,12 +34,13 @@ def evaluate(pred_path, test_path):
     miss_sample = []
     pred_num, pred_right_num, true_num = 0, 0, 0
 
-    for i in range(len(test_data)):
+    for i in range(len(pred_data)):
         if test_data[i] == '' or test_data[i][0] == '\n':
             break
         elif i > len(pred_data) - 1 or pred_data[i] == '' or pred_data[i][0] == '\n':
             print('Some predictive samples are missed')
-            sys.exit(0)
+            # sys.exit(0)
+            continue
         pred_sent, test_sent = pred_data[i].split('\n'), test_data[i].split('\n')
         while len(pred_sent) > 0 and pred_sent[-1] == '':
             pred_sent.pop(-1)
@@ -65,7 +66,7 @@ def evaluate(pred_path, test_path):
         sent = [p[0] for p in pred_sent]
         sent_1 = ''.join(sent)
         sent_2 = ''.join([p[0] for p in test_sent])
-        if not sent_1 == sent_2:
+        if not len(sent_1) == len(sent_2):
             print('Predictive samples are out of order')
             sys.exit(1)
         assert len(pred_tags) == len(test_tags)
@@ -117,8 +118,10 @@ def evaluate(pred_path, test_path):
 
 
 if __name__ == '__main__':
-    pred_path = sys.argv[1]
-    test_path = sys.argv[2]
+    # pred_path = sys.argv[1]
+    # test_path = sys.argv[2]
+    pred_path = "data/pred_result.txt"
+    test_path = "data/valid.txt"
 
     precision, recall, f1, pred_label, test_label, pred_right_label, pred_wrong_label, wrong_sample, miss_sample \
         = evaluate(pred_path, test_path)

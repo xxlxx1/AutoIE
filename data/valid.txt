@@ -18,7 +18,7 @@
 等 B-TV
 着 I-TV
 我 E-TV
-  O
+& O
 2 O
 0 O
 1 O
