@@ -65,6 +65,8 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
             model_name = model_folder + f"/bert_crf_{fold_id}"
             model = BertCRF(cfig=cfig)
+            if torch.cuda.device_count() > 1:
+                model = nn.DataParallel(model)
             model.to(cfig.device)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
 
