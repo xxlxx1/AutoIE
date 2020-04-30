@@ -138,7 +138,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             model.zero_grad()
             loss.mean().backward()
             # gradient clipping
-            # nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
         train_info = " Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time)
