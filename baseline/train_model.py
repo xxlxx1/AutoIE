@@ -63,9 +63,6 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
             model.to(cfig.device)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
-            dev_metrics = evaluate_model(config, model, dev_batches, dev_insts)
-            eval_info = " [dev set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2])
-            logging.info("load right? :" + eval_info)
             hard_constraint_predict(config=config, model=model,
                                     fold_batches=train_batches[1 - fold_id],
                                     folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
