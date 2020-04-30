@@ -10,7 +10,6 @@ import pickle
 
 import itertools
 from torch.optim import Adam
-import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from transformers import BertConfig
@@ -29,12 +28,12 @@ def load_model(config, loadpath=None):
     cfig.label_size = config.label_size
     cfig.idx2labels = config.idx2labels
 
-    model = BertCRF(cfig=cfig)
-    if torch.cuda.device_count() > 1:
-        model = nn.DataParallel(model)
-    model.to(cfig.device)
     if loadpath:
+        model = BertCRF(cfig=cfig)
         utils.load_checkpoint(os.path.join(config.model_folder, loadpath), model)
+    else:
+        model = BertCRF.from_pretrained(config.bert_model_dir, config=cfig)
+    model.to(cfig.device)
     return model
 
 
@@ -138,7 +137,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             model.zero_grad()
             loss.mean().backward()
             # gradient clipping
-            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            # nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
         train_info = " Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time)
