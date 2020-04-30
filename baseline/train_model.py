@@ -21,6 +21,23 @@ from get_data import prepare_data, hard_constraint_predict, set_seed
 from config import Config, evaluate_batch_insts, batching_list_instances
 
 
+def load_model(config, loadpath=None):
+    cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
+    cfig = BertConfig.from_json_file(cfig_path)
+    cfig.device = config.device
+    cfig.label2idx = config.label2idx
+    cfig.label_size = config.label_size
+    cfig.idx2labels = config.idx2labels
+
+    model = BertCRF(cfig=cfig)
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+    model.to(cfig.device)
+    if loadpath:
+        utils.load_checkpoint(os.path.join(config.model_folder, loadpath), model)
+    return model
+
+
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
     train_num = sum([len(insts) for insts in train_insts])
     logging.info(("[Training Info] number of instances: %d" % (train_num)))
@@ -37,32 +54,23 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
         train_batches = [batching_list_instances(config, insts) for insts in train_insts]
 
-        # train 2 models in 2 folds
-        for fold_id, folded_train_insts in enumerate(train_insts):
+        for fold_id in range(2):  # train 2 models in 2 folds
             logging.info("\n" + f"-------- [Training Info] Training fold {fold_id}. Initialized from pre-trained Model -------")
             model_name = model_folder + f"/bert_crf_{fold_id}"
             train_one(config=config, train_batches=train_batches[fold_id],  # Initialize bert model
                       dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
 
-        # assign prediction to other folds
         logging.info("\n\n[Data Info] Assigning labels")
-
-        # using the model trained in one fold to predict the result of another fold's data
-        # and update the label of another fold with the predict result
-        for fold_id, folded_train_insts in enumerate(train_insts):
-
-            cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
-            cfig = BertConfig.from_json_file(cfig_path)
-            cfig.device = config.device
-            cfig.label2idx = config.label2idx
-            cfig.label_size = config.label_size
-            cfig.idx2labels = config.idx2labels
-
+        # 模型0更新训练数据1，模型1更新训练数据0
+        for fold_id in range(2):
+            model = load_model(config)
             model_name = model_folder + f"/bert_crf_{fold_id}"
-            model = BertCRF(cfig=cfig)
 
-            model.to(cfig.device)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
+            dev_metrics = evaluate_model(config, model, train_batches[fold_id], train_insts[fold_id])
+            logging.info(str(fold_id) + "  self [train set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2]))
+            dev_metrics = evaluate_model(config, model, train_batches[1-fold_id], train_insts[1-fold_id])
+            logging.info(str(fold_id) + " other [train set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2]))
             hard_constraint_predict(config=config, model=model,
                                     fold_batches=train_batches[1 - fold_id],
                                     folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
@@ -86,23 +94,6 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         # logging.info("\n")
         # result = evaluate_model(config, model, dev_batches, "dev", dev_insts)
         logging.info("\n\n")
-
-
-def load_model(config, loadpath=None):
-    cfig_path = os.path.join(config.bert_model_dir, 'bert_config.json')
-    cfig = BertConfig.from_json_file(cfig_path)
-    cfig.device = config.device
-    cfig.label2idx = config.label2idx
-    cfig.label_size = config.label_size
-    cfig.idx2labels = config.idx2labels
-
-    model = BertCRF(cfig=cfig)
-    if torch.cuda.device_count() > 1:
-        model = nn.DataParallel(model)
-    model.to(cfig.device)
-    if loadpath:
-        utils.load_checkpoint(os.path.join(config.model_folder, loadpath), model)
-    return model
 
 
 def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instance], dev_batches: List[Tuple],
@@ -147,7 +138,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             model.zero_grad()
             loss.mean().backward()
             # gradient clipping
-            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            # nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
         train_info = " Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time)

@@ -120,25 +120,11 @@ def load_checkpoint(checkpoint, model, optimizer=None):
         model: (torch.nn.Module) model for which the parameters are loaded
         optimizer: (torch.optim) optional: resume optimizer from checkpoint
     """
+    print("load model from:", checkpoint)
     if not os.path.exists(checkpoint):
         raise ("File doesn't exist {}".format(checkpoint))
     checkpoint = torch.load(checkpoint)
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
-
-    from collections import OrderedDict
-    new_state_dict = OrderedDict()
-
-    if torch.cuda.device_count() > 1:
-        for k, v in checkpoint['state_dict'].items():
-            if 'module' not in k:
-                k = 'module.' + k
-            else:
-                k = k.replace('features.module.', 'module.features.')
-            new_state_dict[k] = v
-        model.load_state_dict(new_state_dict)
-    else:
-        model.load_state_dict(checkpoint['state_dict'])
+    model.load_state_dict(checkpoint['state_dict'])
 
     if optimizer:
         optimizer.load_state_dict(checkpoint['optim_dict'])
