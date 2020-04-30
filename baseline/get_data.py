@@ -29,7 +29,7 @@ def prepare_data(logging, conf):
     # read trains/devs
     logging.info("\n")
     logging.info("Loading the datasets...")
-    trains = reader.read_txt(conf.train_file, conf.train_num)
+    trains = reader.read_txt(conf.train_file, conf.train_num, shuffle=True)
     devs = reader.read_txt(conf.dev_file, conf.dev_num)
 
     logging.info("Building label idx ...")
