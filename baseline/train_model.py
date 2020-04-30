@@ -120,7 +120,8 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
             model = BertCRF(cfig=cfig)
             model.to(cfig.device)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
-
+            evaluate_model(config, model, train_batches[fold_id], "self train", train_insts[fold_id])
+            evaluate_model(config, model, train_batches[1-fold_id], "other train", train_insts[1-fold_id])
             hard_constraint_predict(config=config, model=model,
                                     fold_batches=train_batches[1 - fold_id],
                                     folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
