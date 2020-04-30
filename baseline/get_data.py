@@ -29,11 +29,10 @@ def prepare_data(logging, conf):
     # read trains/devs
     logging.info("\n")
     logging.info("Loading the datasets...")
-    trains = reader.read_txt(conf.train_file, conf.train_num, shuffle=True)
+    trains = reader.read_txt(conf.train_file, conf.train_num)
     devs = reader.read_txt(conf.dev_file, conf.dev_num)
 
     logging.info("Building label idx ...")
-    # build label2idx and idx2label
     conf.build_label_idx(trains + devs)
 
     random.shuffle(trains)

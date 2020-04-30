@@ -14,7 +14,7 @@ class Reader:
         self.digit2zero = digit2zero
         self.vocab = set()
 
-    def read_txt(self, file: str, number: int = -1, shuffle=False) -> List[Instance]:  # expected type -> return type
+    def read_txt(self, file: str, number: int = -1) -> List[Instance]:  # expected type -> return type
         count_0 = 0
         print("Reading file: " + file)
         insts = []
@@ -52,8 +52,6 @@ class Reader:
                 labels.append(label)
         print("numbers being replaced by zero:", count_0)
         print("number of sentences: {}".format(len(insts)))
-        if shuffle:
-            random.shuffle(insts)
         return insts
 
 
