@@ -36,8 +36,6 @@ def prepare_data(logging, conf):
     conf.build_label_idx(trains + devs)
 
     random.shuffle(trains)
-    random.shuffle(devs)
-    devs = devs[:len(devs) // 2]
     # set the prediction flag, if is_prediction is False, we will not update this label.
     for inst in trains:
         inst.is_prediction = [False] * len(inst.input)

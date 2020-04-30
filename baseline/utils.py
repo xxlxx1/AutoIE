@@ -130,7 +130,6 @@ def load_checkpoint(checkpoint, model, optimizer=None):
     new_state_dict = OrderedDict()
 
     if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model)
         for k, v in checkpoint['state_dict'].items():
             if 'module' not in k:
                 k = 'module.' + k
