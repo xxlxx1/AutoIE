@@ -134,9 +134,9 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
         epoch_loss = 0
         start_time = time.time()
         model.zero_grad()
+        model.train()
 
         for index in np.random.permutation(len(train_batches)):  # disorder the train batches
-            model.train()
             scheduler.step()
             input_ids, input_seq_lens, annotation_mask, labels = train_batches[index]
             input_masks = input_ids.gt(0)

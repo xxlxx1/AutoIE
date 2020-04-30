@@ -2,7 +2,6 @@ from tqdm import tqdm
 from common import Sentence, Instance
 from typing import List
 import re
-import random
 
 
 class Reader:
