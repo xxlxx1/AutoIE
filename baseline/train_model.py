@@ -19,8 +19,6 @@ from transformers import BertConfig
 from bert_model import BertCRF
 import utils
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
 
 def set_seed(opt, seed):
     random.seed(seed)
@@ -296,7 +294,6 @@ def main():
     conf = Config(opt)
     conf.train_file = conf.dataset + "/train.txt"
     conf.dev_file = conf.dataset + "/valid.txt"
-    os.environ['CUDA_VISIBLE_DEVICES'] = opt.device_num
     # data reader
     reader = Reader(conf.digit2zero)
     set_seed(opt, conf.seed)
