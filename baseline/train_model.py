@@ -10,6 +10,7 @@ import pickle
 
 import itertools
 from torch.optim import Adam
+from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from transformers import BertConfig
@@ -133,11 +134,11 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
             # update loss
             loss = model(input_ids, input_seq_lens=input_seq_lens, annotation_mask=annotation_mask,
                          labels=labels, attention_mask=input_masks)
-            epoch_loss += loss.mean().item()
+            epoch_loss += loss.item()
             model.zero_grad()
-            loss.mean().backward()
+            loss.backward()
             # gradient clipping
-            # nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
+            nn.utils.clip_grad_norm_(parameters=model.parameters(), max_norm=config.clip_grad)
             optimizer.step()
         end_time = time.time()
         train_info = " Epoch %d: loss:%.5f, Time is %.2fs" % (i, epoch_loss, end_time - start_time)
