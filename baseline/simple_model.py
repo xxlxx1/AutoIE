@@ -46,4 +46,5 @@ if __name__ == "__main__":
     trains, devs = prepare_data(logging, conf)
     trains = trains[0] + trains[1]  # 放一起训练.
     train_model(config=conf, train_insts=trains, dev_insts=devs)
+    # 测试一下新建分支开发
 
