@@ -12,7 +12,7 @@ from train_model import train_one
 
 
 def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: List[Instance]):
-    train_num = sum([len(insts) for insts in train_insts])
+    train_num = len(train_insts)
     logging.info(("[Training Info] number of instances: %d" % (train_num)))
     dev_batches = batching_list_instances(config, dev_insts)   # 验证集一直不会改变
 
@@ -22,11 +22,11 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         os.makedirs(model_folder)
 
     logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
-    train_batches = [batching_list_instances(config, insts) for insts in train_insts]
+    train_batches = batching_list_instances(config, train_insts)
 
     logging.info("\n" + f"-------- [Training Info] Training fold {0}. Initialized from pre-trained Model -------")
     model_name = model_folder + f"/bert_crf_simple"
-    train_one(config=config, train_batches=train_batches[0],  # Initialize bert model
+    train_one(config=config, train_batches=train_batches,  # Initialize bert model
                   dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
 
 
@@ -44,5 +44,6 @@ if __name__ == "__main__":
         logging.info(k + ": " + str(opt.__dict__[k]))
 
     trains, devs = prepare_data(logging, conf)
+    trains = trains[0] + trains[1]  # 放一起训练
     train_model(config=conf, train_insts=trains, dev_insts=devs)
 
