@@ -104,6 +104,7 @@ def train_one(config: Config, train_batches: List[Tuple], dev_insts: List[Instan
     if config.full_finetuning:
         logging.info('full finetuning')
         param_optimizer = list(model.named_parameters())
+        param_optimizer = param_optimizer[150:]  # 只优化150-202层
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_grouped_parameters = [
             {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
