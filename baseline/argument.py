@@ -19,7 +19,7 @@ def parse_arguments_t(parser):
     # bert hyperparameter
     parser.add_argument('--bert_model_dir', default='bert-base-chinese-pytorch', help="Directory containing the BERT model in PyTorch")
     parser.add_argument('--max_len', default=180, help="max allowed sequence length")
-    parser.add_argument('--full_finetuning', default=True, action='store_true', help="Whether to fine tune the pre-trained model")
+    parser.add_argument('--full_finetuning', default=True, action='store_false', help="Whether to fine tune the pre-trained model")
     parser.add_argument('--clip_grad', default=5, help="gradient clipping")
 
     # model hyperparameter
@@ -27,6 +27,4 @@ def parse_arguments_t(parser):
     parser.add_argument('--log_name', type=str, default="train.log", help="The name to save the model files")
 
     args = parser.parse_args()
-    for k in args.__dict__:
-        print(k + ": /t" + str(args.__dict__[k]))
     return args
