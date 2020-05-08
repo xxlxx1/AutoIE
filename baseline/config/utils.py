@@ -23,6 +23,14 @@ def log_sum_exp_pytorch(vec: torch.Tensor) -> torch.Tensor:
     return maxScores + torch.log(torch.sum(torch.exp(vec - maxScoresExpanded), 1))
 
 
+def delete_allo(insts):
+    result_insts = []
+    for i in insts:
+        if max(i.output_ids) != 4 or min(i.output_ids) != 4:
+            result_insts.append(i)
+    return result_insts
+
+
 def batching_list_instances(config: Config, insts: List[Instance]):
     train_num = len(insts)
     batch_size = config.batch_size

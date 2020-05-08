@@ -7,7 +7,7 @@ import logging
 import utils
 from argument import parse_arguments_t
 from get_data import prepare_data, set_seed
-from config import Config, batching_list_instances
+from config import Config, batching_list_instances, delete_allo
 from train_model import train_one
 
 
@@ -22,6 +22,8 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         os.makedirs(model_folder)
 
     logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
+    train_insts = delete_allo(train_insts)
+    logging.info("use train data:" + str(len(train_insts)))
     train_batches = batching_list_instances(config, train_insts)
 
     logging.info("\n" + f"-------- [Training Info] Training fold {0}. Initialized from pre-trained Model -------")

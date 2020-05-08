@@ -7,6 +7,7 @@ from common import Instance
 import os
 import logging
 import pickle
+import copy
 
 import itertools
 from torch.optim import Adam
@@ -18,7 +19,7 @@ from bert_model import BertCRF
 import utils
 from argument import parse_arguments_t
 from get_data import prepare_data, hard_constraint_predict, set_seed
-from config import Config, evaluate_batch_insts, batching_list_instances
+from config import Config, evaluate_batch_insts, batching_list_instances, delete_allo
 
 
 def load_model(config, loadpath=None):
@@ -50,14 +51,15 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
 
     num_outer_iterations = config.num_outer_iterations
     for iter in range(num_outer_iterations):
-
         logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
-        train_batches = [batching_list_instances(config, insts) for insts in train_insts]
 
         for fold_id in range(2):  # train 2 models in 2 folds
+            train_data = delete_allo(train_insts[fold_id])
+            train_batches = batching_list_instances(config, train_data)
             logging.info("\n" + f"-------- [Training Info] Training fold {fold_id}. Initialized from pre-trained Model -------")
             model_name = model_folder + f"/bert_crf_{fold_id}"
-            train_one(config=config, train_batches=train_batches[fold_id],  # Initialize bert model
+            logging.info("use train data:" + str(len(train_data)))
+            train_one(config=config, train_batches=train_batches,  # Initialize bert model
                       dev_insts=dev_insts, dev_batches=dev_batches, model_name=model_name)
 
         logging.info("\n\n[Data Info] Assigning labels")
@@ -65,15 +67,10 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         for fold_id in range(2):
             model = load_model(config)
             model_name = model_folder + f"/bert_crf_{fold_id}"
-
+            train_data = train_insts[1 - fold_id]
+            train_batches = batching_list_instances(config, train_data)
             utils.load_checkpoint(os.path.join(model_name, 'best.pth.tar'), model)
-            dev_metrics = evaluate_model(config, model, train_batches[fold_id], train_insts[fold_id])
-            logging.info(str(fold_id) + "  self [train set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2]))
-            dev_metrics = evaluate_model(config, model, train_batches[1-fold_id], train_insts[1-fold_id])
-            logging.info(str(fold_id) + " other [train set] Precision: %.2f, Recall: %.2f, F1: %.2f" % (dev_metrics[0], dev_metrics[1], dev_metrics[2]))
-            hard_constraint_predict(config=config, model=model,
-                                    fold_batches=train_batches[1 - fold_id],
-                                    folded_insts=train_insts[1 - fold_id])  # set a new label id, k is set to 2, so 1 - fold_id can be used
+            hard_constraint_predict(config=config, model=model, fold_batches=train_batches, folded_insts=train_data)
 
         # train the final model
         logging.info("\n\n")

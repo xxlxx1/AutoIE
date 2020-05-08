@@ -12,7 +12,7 @@ def pred(model, dev_insts, config):
     batch_size = 32
     dev_batches = batching_list_instances(config, dev_insts)
     batch_id = 0
-    f_w = open("pred_result.txt", "w", encoding="utf8")
+    f_w = open("pred_result_o.txt", "w", encoding="utf8")
     for batch in dev_batches:
         one_batch_insts = dev_insts[batch_id * batch_size:(batch_id + 1) * batch_size]
         input_ids, input_seq_lens, annotation_mask, labels = batch
@@ -31,7 +31,7 @@ def pred(model, dev_insts, config):
 
 def main():
 
-    config_name = "/data/xlxia/code/AutoIE/baseline/saved_model/config.conf"
+    config_name = "/data/xlxia/code/AutoIE/baseline/saved_model_o/config.conf"
     with open(config_name, 'rb') as f:
         config = pickle.load(f)
     label2idx = copy.deepcopy(config.label2idx)
