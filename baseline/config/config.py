@@ -59,6 +59,8 @@ class Config:
         self.full_finetuning = args.full_finetuning
         self.clip_grad = args.clip_grad
 
+        self.deleteo = args.deleto
+
     def build_label_idx(self, insts: List[Instance]) -> None:
         """
         Build the mapping from label to index and index to labels.

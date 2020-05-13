@@ -54,7 +54,9 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
 
         for fold_id in range(2):  # train 2 models in 2 folds
-            train_data = delete_allo(train_insts[fold_id])
+            train_data = train_insts[fold_id]
+            if config.deleteo:
+                train_data = delete_allo(train_data)
             train_batches = batching_list_instances(config, train_data)
             logging.info("\n" + f"-------- [Training Info] Training fold {fold_id}. Initialized from pre-trained Model -------")
             model_name = model_folder + f"/bert_crf_{fold_id}"

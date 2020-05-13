@@ -22,7 +22,8 @@ def train_model(config: Config, train_insts: List[List[Instance]], dev_insts: Li
         os.makedirs(model_folder)
 
     logging.info("-" * 20 + f" [Training Info] Running for {iter}th large iterations. " + "-" * 20)
-    train_insts = delete_allo(train_insts)
+    if config.deleteo:
+        train_insts = delete_allo(train_insts)
     logging.info("use train data:" + str(len(train_insts)))
     train_batches = batching_list_instances(config, train_insts)
 
@@ -48,5 +49,5 @@ if __name__ == "__main__":
     trains, devs = prepare_data(logging, conf)
     trains = trains[0] + trains[1]  # 放一起训练.
     train_model(config=conf, train_insts=trains, dev_insts=devs)
-    # 测试一下新建分支开发
 
+# CUDA_VISIBLE_DEVICES=7 python simple_model.py --dataset ../data/ecommerce --num_epochs 60 --model_folder simple_ecommerce  --batch_size 32 --log_name simple_ecommerce.log

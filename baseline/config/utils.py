@@ -24,6 +24,7 @@ def log_sum_exp_pytorch(vec: torch.Tensor) -> torch.Tensor:
 
 
 def delete_allo(insts):
+    print("delete all O")
     result_insts = []
     for i in insts:
         if max(i.output_ids) != 4 or min(i.output_ids) != 4:

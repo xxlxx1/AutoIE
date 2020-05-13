@@ -120,7 +120,7 @@ def evaluate(pred_path, test_path):
 if __name__ == '__main__':
     # pred_path = sys.argv[1]
     # test_path = sys.argv[2]
-    pred_path = "data/pred_result.txt"
+    pred_path = "data/pred_result_o.txt"
     test_path = "data/valid.txt"
 
     precision, recall, f1, pred_label, test_label, pred_right_label, pred_wrong_label, wrong_sample, miss_sample \
